@@ -7,7 +7,7 @@ const home_dir = require('os').homedir();
 const corrected_theme = gtk_theme.split(`'`).join('').replace(/\n$/, '');
 const corrected_layout = gtk_decoration_layout.split(`'`).join('').replace(/\n$/, '');;
 const array_of_buttons = corrected_layout.split(":");
-const supported_buttons = array_of_buttons.filter(button => button !== 'appmenu');
+const supported_buttons = array_of_buttons.filter(button => button !== 'appmenu')[0].split(',');
 
 const global_theme = try_folder(`/usr/share/themes/${corrected_theme}`);
 const user_theme = try_folder(`${home_dir}/.themes/${corrected_theme}`);
