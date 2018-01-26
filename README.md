@@ -5,6 +5,16 @@ Get the current GTK theme at the time of calling the function.
 ## Usage
 
 The `theme` object returned from this package will have the following;
+* theme_name
+    * The theme's name 
+* gtk_decoration_layout
+    * GTK Decoration Layout (Unmodified)
+* button_layout
+    * Button layout
+        * String: Right; The default layout, all min/max/close buttons are rendered on right side
+        * String: Left; All min/max/close buttons are rendered on left side
+* supported_buttons
+    * Array of supported buttons (close,min,max)
 * root
     * The folder containing all GTK(2/3) folders etc
 * gtk_folder
