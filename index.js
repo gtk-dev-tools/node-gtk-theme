@@ -11,6 +11,7 @@ const supported_buttons = array_of_buttons.filter(button => button !== 'appmenu'
 
 const global_theme = try_folder(`/usr/share/themes/${corrected_theme}`);
 const user_theme = try_folder(`${home_dir}/.themes/${corrected_theme}`);
+const snap_theme = try_folder(`/snap/${corrected_theme.toLocaleLowerCase()}/current/share/themes/${corrected_theme}`);
 let theme = null;
 let css = null;
 let button_layout = 'right';
@@ -21,6 +22,10 @@ if (false !== user_theme) {
 
 if (false !== global_theme) {
     theme = global_theme;
+}
+
+if (false !== snap_theme) {
+    theme = snap_theme;
 }
 
 try {
