@@ -35,7 +35,7 @@ try {
     css = '';
 }
 
-if (corrected_layout.indexOf('menu') !== -1 && array_of_buttons[array_of_buttons.length - 1] === 'appmenu') {
+if (corrected_layout.indexOf(':') === corrected_layout.length - 1) {
     button_layout = 'left';
 }
 
