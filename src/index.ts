@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
 
-interface GtkData {
+export interface GtkData {
     name: string;
     layout: {
         buttons: "left" | "right";
@@ -24,7 +24,7 @@ interface GtkData {
     }
 }
 
-interface IGtkThemeEventList {
+export interface IGtkThemeEventList {
     themeChange?: (data: GtkData) => void;
     layoutChange?: (data: GtkData) => void;
 }
