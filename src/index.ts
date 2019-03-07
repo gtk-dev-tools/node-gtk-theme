@@ -1,6 +1,6 @@
-import { gtk_theme } from './get_theme_name';
-import { gtk_decoration_layout } from './get_button_layout';
-import { try_folder } from './try_folder';
+import { themeName } from './theme_name';
+import { decorationLayout } from './button_layout';
+import { tryFolder } from './try_folder';
 import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
@@ -13,7 +13,7 @@ interface GtkData {
     };
     supported: {
         buttons: string[];
-        // This is a feature to be detected by version currently.
+        // Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
         // A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
         csd: boolean;
     }
@@ -25,14 +25,14 @@ interface GtkData {
 }
 
 interface IGtkThemeEventList {
-    themeChange?: (data: any) => void;
-    layoutChange?: () => void;
+    themeChange?: (data: GtkData) => void;
+    layoutChange?: (data: GtkData) => void;
 }
 
 export class GtkTheme {
 
     private themeName: string;
-    private direction: string;
+    private buttonLayout: "right" | "left";
 
     on: IGtkThemeEventList = {};
 
@@ -40,7 +40,7 @@ export class GtkTheme {
         fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, event => {
             if (event === 'change') {
                 const data = this.getTheme();
-    
+
                 if (this.themeName !== data.name) {
                     this.themeName = data.name;
                     if (this.on.themeChange) {
@@ -48,35 +48,41 @@ export class GtkTheme {
                     }
                 }
 
-                if (this.)
+                if (this.buttonLayout !== data.layout.buttons) {
+                    this.buttonLayout = data.layout.buttons;
+
+                    if (this.on.layoutChange) {
+                        this.on.layoutChange(data);
+                    }
+                }
             }
         });
     }
 
     public getTheme (): GtkData {
-        const correctedThemeName = gtk_theme().split(`'`).join('').replace(/\n$/, '');
-        const correctedLayout = gtk_decoration_layout().split(`'`).join('').replace(/\n$/, '');
+        const correctedThemeName = themeName().split(`'`).join('').replace(/\n$/, '');
+        const correctedLayout = decorationLayout().split(`'`).join('').replace(/\n$/, '');
         const arrayOfButtons = correctedLayout.split(":");
         const supportedButtons = arrayOfButtons.filter((button: string) => button !== 'appmenu')[0].split(',');
         const themes = {
-            global: try_folder(`/usr/share/themes/${correctedThemeName}`);
-            user: try_folder(`${homedir()}/.themes/${correctedThemeName}`);
-            snap: try_folder(`/snap/${correctedThemeName.toLocaleLowerCase()}/current/share/themes/${correctedThemeName}`);
+            global: tryFolder(`/usr/share/themes/${correctedThemeName}`),
+            user: tryFolder(`${homedir()}/.themes/${correctedThemeName}`),
+            snap: tryFolder(`/snap/${correctedThemeName.toLocaleLowerCase()}/current/share/themes/${correctedThemeName}`),
         };
 
-        let theme = null;
+        let theme = '';
         let css = null;
         let buttonLayout: 'left' | 'right' = 'right';
 
-        if (false !== themes.user) {
+        if ('' !== themes.user) {
             theme = themes.user;
         }
 
-        if (false !== themes.global) {
+        if ('' !== themes.global) {
             theme = themes.global;
         }
 
-        if (false !== themes.snap) {
+        if ('' !== themes.snap) {
             theme = themes.snap;
         }
 
