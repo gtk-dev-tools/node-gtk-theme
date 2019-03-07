@@ -2,7 +2,7 @@
   "name": "@jakejarrett/gtk-theme",
   "version": "2.0.0-alpha.1",
   "description": "Get the current GTK3 theme",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
