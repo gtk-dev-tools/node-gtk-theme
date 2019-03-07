@@ -74,4 +74,6 @@ themeName = initialData.theme_name;
 
 exports.theme = initialData;
 
+console.log(initialData)
+
 onChange(() => null);
