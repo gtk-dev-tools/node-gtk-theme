@@ -6,113 +6,157 @@ import path from 'path';
 import { homedir } from 'os';
 
 export interface GtkData {
-    name: string;
-    layout: {
-        buttons: "left" | "right";
-        decoration: string;
-    };
-    supported: {
-        buttons: string[];
-        // Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
-        // A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
-        csd: boolean;
-    }
-    gtk: {
-        root: string;
-        folder: string;
-        css: string;
-    }
+	name: string;
+	layout: {
+		buttons: "left" | "right";
+		decoration: string;
+	};
+	supported: {
+		buttons: string[];
+		// Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
+		// A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
+		csd: boolean;
+	}
+	gtk: {
+		root: string;
+		folder: string;
+		css: string;
+	}
 }
 
 export interface IGtkThemeEventList {
-    themeChange?: (data: GtkData) => void;
-    layoutChange?: (data: GtkData) => void;
+	themeChange?: (data: GtkData) => void;
+	layoutChange?: (data: GtkData) => void;
+}
+
+export type prefetch = (context: GtkTheme) => void;
+
+export interface GTKThemeHooks {
+	prefetch?: prefetch[];
+}
+
+export interface GTKThemeOptions {
+	hooks?: GTKThemeHooks;
+	events: IGtkThemeEventList;
 }
 
 export class GtkTheme {
 
-    private themeName: string;
-    private buttonLayout: "right" | "left";
+	private themeName: string;
+	private buttonLayout: "right" | "left";
 
-    on: IGtkThemeEventList = {};
+	on: IGtkThemeEventList = {};
 
-    constructor () {
-        fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, event => {
-            if (event === 'change') {
-                const data = this.getTheme();
+	private hooks: GTKThemeHooks = {
+		prefetch: [],
+	};
 
-                if (this.themeName !== data.name) {
-                    this.themeName = data.name;
-                    if (this.on.themeChange) {
-                        this.on.themeChange(data);
-                    }
-                }
+	constructor (options: GTKThemeOptions) {
+		const { hooks, events } = options;
 
-                if (this.buttonLayout !== data.layout.buttons) {
-                    this.buttonLayout = data.layout.buttons;
+		
+		if (hooks != null) {
+			const prefetch = hooks.prefetch;
 
-                    if (this.on.layoutChange) {
-                        this.on.layoutChange(data);
-                    }
-                }
-            }
-        });
-    }
+			if (prefetch && Array.isArray(prefetch) && prefetch.length > 0) {
+				this.hooks.prefetch = prefetch;
+			}
+		}
 
-    public getTheme (): GtkData {
-        const correctedThemeName = themeName().split(`'`).join('').replace(/\n$/, '');
-        const correctedLayout = decorationLayout().split(`'`).join('').replace(/\n$/, '');
-        const arrayOfButtons = correctedLayout.split(":");
-        const supportedButtons = arrayOfButtons.filter((button: string) => button !== 'appmenu')[0].split(',');
-        const themes = {
-            global: tryFolder(`/usr/share/themes/${correctedThemeName}`),
-            user: tryFolder(`${homedir()}/.themes/${correctedThemeName}`),
-            snap: tryFolder(`/snap/${correctedThemeName.toLocaleLowerCase()}/current/share/themes/${correctedThemeName}`),
-        };
+		if (events != null) {
+			if (events.layoutChange) {
+				this.on.layoutChange = events.layoutChange;
+			}
 
-        let theme = '';
-        let css = null;
-        let buttonLayout: 'left' | 'right' = 'right';
+			if (events.layoutChange) {
+				this.on.layoutChange = events.layoutChange;
+			}
+		}
 
-        if ('' !== themes.user) {
-            theme = themes.user;
-        }
+		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, (event: string) => {
+			if (event === 'change') {
+				const data = this.getTheme();
 
-        if ('' !== themes.global) {
-            theme = themes.global;
-        }
+				if (this.themeName !== data.name) {
+					this.themeName = data.name;
+					if (this.on.themeChange) {
+						this.on.themeChange(data);
+					}
+				}
 
-        if ('' !== themes.snap) {
-            theme = themes.snap;
-        }
+				if (this.buttonLayout !== data.layout.buttons) {
+					this.buttonLayout = data.layout.buttons;
 
-        try {
-            css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, { encoding: 'utf8' })
-        } catch (error) {
-            console.error('Reading file caused this error:', error);
-            css = '';
-        }
+					if (this.on.layoutChange) {
+						this.on.layoutChange(data);
+					}
+				}
+			}
+		});
+	}
 
-        if (correctedLayout.indexOf(':') === correctedLayout.length - 1) {
-            buttonLayout = 'left';
-        }
+	public getTheme (): GtkData {
+		// Hook into a pre fetch of the theme.
+		// Synchronous
+		if (this.hooks.prefetch.length > 0) {
+			for (const hook of this.hooks.prefetch) {
+				hook(this);
+			}
+		}
 
-        return {
-            name: correctedThemeName,
-            gtk: {
-                css,
-                folder: `${theme}/gtk-3.0/`,
-                root: theme || '',
-            },
-            supported: {
-                buttons: supportedButtons,
-                csd: true,
-            },
-            layout: {
-                buttons: buttonLayout,
-                decoration: correctedLayout
-            }
-        };
-    }
+		const correctedThemeName = themeName().split(`'`).join('').replace(/\n$/, '');
+		const correctedLayout = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		const arrayOfButtons = correctedLayout.split(":");
+		const supportedButtons = arrayOfButtons.filter((button: string) => button !== 'appmenu')[0].split(',');
+		const themes = {
+			global: tryFolder(`/usr/share/themes/${correctedThemeName}`),
+			user: tryFolder(`${homedir()}/.themes/${correctedThemeName}`),
+			snap: tryFolder(`/snap/${correctedThemeName.toLocaleLowerCase()}/current/share/themes/${correctedThemeName}`),
+		};
+
+		let theme = '';
+		let css = null;
+		let buttonLayout: 'left' | 'right' = 'right';
+
+		if ('' !== themes.user) {
+			theme = themes.user;
+		}
+
+		if ('' !== themes.global) {
+			theme = themes.global;
+		}
+
+		if ('' !== themes.snap) {
+			theme = themes.snap;
+		}
+
+		try {
+			css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, { encoding: 'utf8' })
+		} catch (error) {
+			console.error('Reading file caused this error:', error);
+			css = '';
+		}
+
+		if (correctedLayout.indexOf(':') === correctedLayout.length - 1) {
+			buttonLayout = 'left';
+		}
+
+		return {
+			name: correctedThemeName,
+			gtk: {
+				css,
+				folder: `${theme}/gtk-3.0/`,
+				root: theme || '',
+			},
+			supported: {
+				buttons: supportedButtons,
+				csd: true,
+			},
+			layout: {
+				buttons: buttonLayout,
+				decoration: correctedLayout
+			}
+		};
+	}
 
 }
