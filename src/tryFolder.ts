@@ -5,7 +5,9 @@ export const tryFolder = (folder: string) => {
         statSync(folder);
         return folder;
     } catch (error) {
-        console.error(error);
+        if (process.env.G_MESSAGES_DEBUG === 'all') {
+            console.error(error);
+        }
         return '';
     }
 }

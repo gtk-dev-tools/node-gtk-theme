@@ -1,60 +1,51 @@
-import { themeName } from './theme_name';
-import { decorationLayout } from './button_layout';
-import { tryFolder } from './try_folder';
+import { themeName } from './themeName';
+import { decorationLayout } from './decorationLayout';
 import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
+import {
+	IGtkTheme,
+	GtkData,
+	IGtkThemeEventList,
+	prefetch,
+	GTKThemeHooks,
+	GTKThemeOptions,
+} from './interfaces';
+import { themeFolders } from './themeFolders';
 
-export interface GtkData {
-	name: string;
-	layout: {
-		buttons: "left" | "right";
-		decoration: string;
-	};
-	supported: {
-		buttons: string[];
-		// Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
-		// A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
-		csd: boolean;
-	}
-	gtk: {
-		root: string;
-		folder: string;
-		css: string;
-	}
-}
 
-export interface IGtkThemeEventList {
-	themeChange?: (data: GtkData) => void;
-	layoutChange?: (data: GtkData) => void;
-}
-
-export type prefetch = (context: GtkTheme) => void;
-
-export interface GTKThemeHooks {
-	prefetch?: prefetch[];
-}
-
-export interface GTKThemeOptions {
-	hooks?: GTKThemeHooks;
-	events: IGtkThemeEventList;
-}
-
-export class GtkTheme {
-
+class GtkTheme implements IGtkTheme {
 	private themeName: string;
 	private buttonLayout: "right" | "left";
 
 	on: IGtkThemeEventList = {};
 
-	private hooks: GTKThemeHooks = {
-		prefetch: [],
+	private hooks: GTKThemeHooks = { prefetch: [] };
+
+	private themeChanged = (event: string) => {
+		if (event === 'change') {
+			const data = this.getTheme();
+
+			if (this.themeName !== data.name) {
+				this.themeName = data.name;
+				if (this.on.themeChange) {
+					this.on.themeChange(data);
+				}
+			}
+
+			if (this.buttonLayout !== data.layout.buttons) {
+				this.buttonLayout = data.layout.buttons;
+
+				if (this.on.layoutChange) {
+					this.on.layoutChange(data);
+				}
+			}
+		}
 	};
 
 	constructor (options: GTKThemeOptions) {
 		const { hooks, events } = options;
 
-		
 		if (hooks != null) {
 			const prefetch = hooks.prefetch;
 
@@ -68,31 +59,12 @@ export class GtkTheme {
 				this.on.layoutChange = events.layoutChange;
 			}
 
-			if (events.layoutChange) {
-				this.on.layoutChange = events.layoutChange;
+			if (events.themeChange) {
+				this.on.themeChange = events.themeChange;
 			}
 		}
 
-		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, (event: string) => {
-			if (event === 'change') {
-				const data = this.getTheme();
-
-				if (this.themeName !== data.name) {
-					this.themeName = data.name;
-					if (this.on.themeChange) {
-						this.on.themeChange(data);
-					}
-				}
-
-				if (this.buttonLayout !== data.layout.buttons) {
-					this.buttonLayout = data.layout.buttons;
-
-					if (this.on.layoutChange) {
-						this.on.layoutChange(data);
-					}
-				}
-			}
-		});
+		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, this.themeChanged);
 	}
 
 	public getTheme (): GtkData {
@@ -108,32 +80,30 @@ export class GtkTheme {
 		const correctedLayout = decorationLayout().split(`'`).join('').replace(/\n$/, '');
 		const arrayOfButtons = correctedLayout.split(":");
 		const supportedButtons = arrayOfButtons.filter((button: string) => button !== 'appmenu')[0].split(',');
-		const themes = {
-			global: tryFolder(`/usr/share/themes/${correctedThemeName}`),
-			user: tryFolder(`${homedir()}/.themes/${correctedThemeName}`),
-			snap: tryFolder(`/snap/${correctedThemeName.toLocaleLowerCase()}/current/share/themes/${correctedThemeName}`),
-		};
+		const themes = themeFolders(correctedThemeName);
 
 		let theme = '';
 		let css = null;
 		let buttonLayout: 'left' | 'right' = 'right';
 
+		if ('' !== themes.snap) {
+			theme = themes.snap;
+		}
+
 		if ('' !== themes.user) {
 			theme = themes.user;
 		}
 
-		if ('' !== themes.global) {
+		if ('' !== themes.global || '' === theme) {
 			theme = themes.global;
-		}
-
-		if ('' !== themes.snap) {
-			theme = themes.snap;
 		}
 
 		try {
 			css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, { encoding: 'utf8' })
 		} catch (error) {
-			console.error('Reading file caused this error:', error);
+			if (process.env.G_MESSAGES_DEBUG === 'all') {
+				console.error('Reading file caused this error:', error);
+			}
 			css = '';
 		}
 
@@ -150,6 +120,7 @@ export class GtkTheme {
 			},
 			supported: {
 				buttons: supportedButtons,
+				// TODO: Make this check for version of GTK.
 				csd: true,
 			},
 			layout: {
@@ -158,5 +129,14 @@ export class GtkTheme {
 			}
 		};
 	}
-
 }
+
+export {
+	GtkTheme,
+	IGtkTheme,
+	GtkData,
+	IGtkThemeEventList,
+	prefetch,
+	GTKThemeHooks,
+	GTKThemeOptions,
+};
