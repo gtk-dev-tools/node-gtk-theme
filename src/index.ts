@@ -50,9 +50,14 @@ class GtkTheme implements IGtkTheme {
 
 		if (hooks != null) {
 			const prefetch = hooks.prefetch;
+			const postfetch = hooks.postfetch;
 
 			if (prefetch && Array.isArray(prefetch) && prefetch.length > 0) {
 				this.hooks.prefetch = prefetch;
+			}
+
+			if (postfetch && Array.isArray(postfetch) && postfetch.length > 0) {
+				this.hooks.postfetch = postfetch;
 			}
 		}
 
@@ -116,6 +121,10 @@ class GtkTheme implements IGtkTheme {
 		};
 	}
 
+	private clone (obj: any) {
+		return JSON.parse(JSON.stringify(obj));
+	}
+
 	public getTheme (): GtkData {
 		// Hook into a pre fetch of the theme.
 		// Synchronous
@@ -129,18 +138,25 @@ class GtkTheme implements IGtkTheme {
 		const decoration: string = decorationLayout().split(`'`).join('').replace(/\n$/, '');
 		const gtk: NGtkCSSData = this.getGtkObj(name);
 		const supported: NGtkSupportedData = this.getSupported(decoration);
-		let buttons: 'left' | 'right' = 'right';
-
-		if (decoration.indexOf(':') === decoration.length - 1) {
-			buttons = 'left';
-		}
-
-		return {
+		const buttons: 'left' | 'right' = decoration.indexOf(':') === decoration.length - 1 ? 'left' : 'right';
+		const theme = {
 			name,
 			gtk,
 			supported,
 			layout: { buttons, decoration }
 		};
+		let postfetchedTheme = this.clone(theme);
+
+		if (this.hooks.prefetch.length > 0) {
+			for (const hook of this.hooks.postfetch) {
+				const r = this.clone(hook(theme));
+				if (!!r) {
+					postfetchedTheme = r;
+				}
+			}
+		}
+
+		return postfetchedTheme;
 	}
 }
 
