@@ -76,15 +76,14 @@ class GtkTheme implements IGtkTheme {
 			}
 		}
 
-		const correctedThemeName = themeName().split(`'`).join('').replace(/\n$/, '');
-		const correctedLayout = decorationLayout().split(`'`).join('').replace(/\n$/, '');
-		const arrayOfButtons = correctedLayout.split(":");
-		const supportedButtons = arrayOfButtons.filter((button: string) => button !== 'appmenu')[0].split(',');
-		const themes = themeFolders(correctedThemeName);
+		const name = themeName().split(`'`).join('').replace(/\n$/, '');
+		const decoration = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		const supportedButtons = decoration.split(":").filter((button: string) => button !== 'appmenu')[0].split(',');
+		const themes = themeFolders(name);
 
 		let theme = '';
 		let css = null;
-		let buttonLayout: 'left' | 'right' = 'right';
+		let buttons: 'left' | 'right' = 'right';
 
 		if ('' !== themes.snap) {
 			theme = themes.snap;
@@ -107,12 +106,12 @@ class GtkTheme implements IGtkTheme {
 			css = '';
 		}
 
-		if (correctedLayout.indexOf(':') === correctedLayout.length - 1) {
-			buttonLayout = 'left';
+		if (decoration.indexOf(':') === decoration.length - 1) {
+			buttons = 'left';
 		}
 
 		return {
-			name: correctedThemeName,
+			name,
 			gtk: {
 				css,
 				folder: `${theme}/gtk-3.0/`,
@@ -124,8 +123,8 @@ class GtkTheme implements IGtkTheme {
 				csd: true,
 			},
 			layout: {
-				buttons: buttonLayout,
-				decoration: correctedLayout
+				buttons,
+				decoration
 			}
 		};
 	}
