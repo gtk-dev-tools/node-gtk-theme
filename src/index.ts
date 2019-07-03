@@ -83,7 +83,7 @@ class GtkTheme implements IGtkTheme {
 	/**
 	 * Gets the relevant information for the GTK css.
 	 */
-	private getGtkObj (): NGtkCSSData {
+	private getGtkObj (name: string): NGtkCSSData {
 		const themes = themeFolders(name);
 		let theme: string = '';
 		let css: string;
@@ -127,7 +127,7 @@ class GtkTheme implements IGtkTheme {
 
 		const name: string = themeName().split(`'`).join('').replace(/\n$/, '');
 		const decoration: string = decorationLayout().split(`'`).join('').replace(/\n$/, '');
-		const gtk: NGtkCSSData = this.getGtkObj();
+		const gtk: NGtkCSSData = this.getGtkObj(name);
 		const supported: NGtkSupportedData = this.getSupported(decoration);
 		let buttons: 'left' | 'right' = 'right';
 
