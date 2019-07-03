@@ -34,7 +34,7 @@ export interface IGtkThemeEventList {
 }
 
 export type prefetch = (context: IGtkTheme) => void;
-export type postfetch = (theme: GtkData) => GtkData;
+export type postfetch = (theme: GtkData) => GtkData | null;
 
 export interface GTKThemeHooks {
 	prefetch?: prefetch[];

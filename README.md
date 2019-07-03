@@ -57,6 +57,18 @@ The `theme` object returned from this package will have the following;
     * When the theme has changed
     * Gets the theme object
 
+### Plugin support / Hooks
+You can hook into the lifecycle via these;
+
+* hooks
+    * prefetch
+        * do stuff before we actually start fetching the new theme
+        * Passes in a reference to the GtkTheme context that it's running under
+    * postfetch
+        * mutate the theme if needed before it is returned to the consumer
+        * Passed a clone of the theme, must return the new version of the theme or null if you aren't mutating the theme.
+
+
 Example usage. (console logs each theme change)
 ```ts
 import { GtkTheme, GtkData } from '@jakejarrett/gtk-theme';
@@ -67,6 +79,10 @@ new GtkTheme({
         themeChange: (data: GtkData) => {
             console.log('data changed', data.name);
         }
+    },
+    hooks: {
+        prefetch: [(GtkContext: GtkTheme) => console.log(GtkContext)]
+        postfetch: [(theme: GtkData) => console.log(theme)]
     }
 }); 
 ```
