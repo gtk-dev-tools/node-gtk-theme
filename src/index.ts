@@ -67,23 +67,24 @@ class GtkTheme implements IGtkTheme {
 		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, this.themeChanged);
 	}
 
-	public getTheme (): GtkData {
-		// Hook into a pre fetch of the theme.
-		// Synchronous
-		if (this.hooks.prefetch.length > 0) {
-			for (const hook of this.hooks.prefetch) {
-				hook(this);
-			}
-		}
+	/**
+	 * Get the supported buttons & whether CSD is supported.
+	 */
+	private getSupported (decoration: string = '') {
+		return {
+			buttons: decoration.split(":").filter((button: string) => button !== 'appmenu')[0].split(','),
+			// TODO: Make this check for version of GTK.
+			csd: true,
+		};
+	}
 
-		const name = themeName().split(`'`).join('').replace(/\n$/, '');
-		const decoration = decorationLayout().split(`'`).join('').replace(/\n$/, '');
-		const supportedButtons = decoration.split(":").filter((button: string) => button !== 'appmenu')[0].split(',');
+	/**
+	 * Gets the relevant information for the GTK css.
+	 */
+	private getGtkObj () {
 		const themes = themeFolders(name);
-
 		let theme = '';
 		let css = null;
-		let buttons: 'left' | 'right' = 'right';
 
 		if ('' !== themes.snap) {
 			theme = themes.snap;
@@ -106,22 +107,34 @@ class GtkTheme implements IGtkTheme {
 			css = '';
 		}
 
+		return {
+			css,
+			folder: `${theme}/gtk-3.0/`,
+			root: theme || '',
+		};
+	}
+
+	public getTheme (): GtkData {
+		// Hook into a pre fetch of the theme.
+		// Synchronous
+		if (this.hooks.prefetch.length > 0) {
+			for (const hook of this.hooks.prefetch) {
+				hook(this);
+			}
+		}
+
+		const name = themeName().split(`'`).join('').replace(/\n$/, '');
+		const decoration = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		let buttons: 'left' | 'right' = 'right';
+
 		if (decoration.indexOf(':') === decoration.length - 1) {
 			buttons = 'left';
 		}
 
 		return {
 			name,
-			gtk: {
-				css,
-				folder: `${theme}/gtk-3.0/`,
-				root: theme || '',
-			},
-			supported: {
-				buttons: supportedButtons,
-				// TODO: Make this check for version of GTK.
-				csd: true,
-			},
+			gtk: this.getGtkObj(),
+			supported: this.getSupported(decoration),
 			layout: {
 				buttons,
 				decoration
