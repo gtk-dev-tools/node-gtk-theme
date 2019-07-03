@@ -3,23 +3,29 @@ export interface IGtkTheme {
 	getTheme (): GtkData;
 }
 
+export interface NGtkLayoutData {
+	buttons: "left" | "right";
+	decoration: string;
+}
+
+export interface NGtkSupportedData {
+	buttons: string[];
+	// Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
+	// A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
+	csd: boolean;
+}
+
+export interface NGtkCSSData {
+	root: string;
+	folder: string;
+	css: string;
+}
+
 export interface GtkData {
 	name: string;
-	layout: {
-		buttons: "left" | "right";
-		decoration: string;
-	};
-	supported: {
-		buttons: string[];
-		// Currently defaults to true always. Need to figure out detection (checking versions of specific DE's is not maintainable..)
-		// A proposal was written to address this here; https://github.com/jakejarrett/desktop-hinting
-		csd: boolean;
-	}
-	gtk: {
-		root: string;
-		folder: string;
-		css: string;
-	}
+	layout: NGtkLayoutData;
+	supported: NGtkSupportedData;
+	gtk: NGtkCSSData;
 }
 
 export interface IGtkThemeEventList {

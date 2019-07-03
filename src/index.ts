@@ -10,6 +10,8 @@ import {
 	prefetch,
 	GTKThemeHooks,
 	GTKThemeOptions,
+	NGtkCSSData,
+	NGtkSupportedData,
 } from './interfaces';
 import { themeFolders } from './themeFolders';
 
@@ -70,7 +72,7 @@ class GtkTheme implements IGtkTheme {
 	/**
 	 * Get the supported buttons & whether CSD is supported.
 	 */
-	private getSupported (decoration: string = '') {
+	private getSupported (decoration: string = ''): NGtkSupportedData {
 		return {
 			buttons: decoration.split(":").filter((button: string) => button !== 'appmenu')[0].split(','),
 			// TODO: Make this check for version of GTK.
@@ -81,10 +83,10 @@ class GtkTheme implements IGtkTheme {
 	/**
 	 * Gets the relevant information for the GTK css.
 	 */
-	private getGtkObj () {
+	private getGtkObj (): NGtkCSSData {
 		const themes = themeFolders(name);
-		let theme = '';
-		let css = null;
+		let theme: string = '';
+		let css: string;
 
 		if ('' !== themes.snap) {
 			theme = themes.snap;
@@ -123,8 +125,10 @@ class GtkTheme implements IGtkTheme {
 			}
 		}
 
-		const name = themeName().split(`'`).join('').replace(/\n$/, '');
-		const decoration = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		const name: string = themeName().split(`'`).join('').replace(/\n$/, '');
+		const decoration: string = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		const gtk: NGtkCSSData = this.getGtkObj();
+		const supported: NGtkSupportedData = this.getSupported(decoration);
 		let buttons: 'left' | 'right' = 'right';
 
 		if (decoration.indexOf(':') === decoration.length - 1) {
@@ -133,12 +137,9 @@ class GtkTheme implements IGtkTheme {
 
 		return {
 			name,
-			gtk: this.getGtkObj(),
-			supported: this.getSupported(decoration),
-			layout: {
-				buttons,
-				decoration
-			}
+			gtk,
+			supported,
+			layout: { buttons, decoration }
 		};
 	}
 }
