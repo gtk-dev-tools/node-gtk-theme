@@ -1,6 +1,6 @@
 # gtk-theme
 
-Get the current GTK theme at the time of calling the function.
+Get the current GTK theme.
 
 ## Usage
 ### Theme object
