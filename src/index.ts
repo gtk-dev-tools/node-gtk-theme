@@ -15,6 +15,7 @@ import {
 } from "./interfaces";
 import { themeFolders } from "./themeFolders";
 import { findGResourceAsset } from "./findGResourceAsset";
+import { convertGResource } from "./convertGResource";
 
 class GtkTheme implements IGtkTheme {
 	private themeName: string;
@@ -99,6 +100,14 @@ class GtkTheme implements IGtkTheme {
 		const themes = themeFolders(name);
 		let theme: string = "";
 		let css: string;
+		const gresourceAsset = findGResourceAsset({
+			theme: name,
+			folder: `${theme}/gtk-3.0/`
+		});
+
+		if (gresourceAsset) {
+			css = convertGResource(gresourceAsset);
+		}
 
 		if ("" !== themes.snap) {
 			theme = themes.snap;
@@ -112,22 +121,16 @@ class GtkTheme implements IGtkTheme {
 			theme = themes.global;
 		}
 
-		try {
-			css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, {
-				encoding: "utf8"
-			});
-		} catch (error) {
-			if (process.env.G_MESSAGES_DEBUG === "all") {
-				console.error("Reading file caused this error:", error);
-			}
-			css = "";
-		}
-
-		if (css === "" || css == null) {
+		if (css != null && css !== "" && !gresourceAsset) {
 			try {
-				console.log();
-			} catch (err) {
-				console.error(err);
+				css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, {
+					encoding: "utf8"
+				});
+			} catch (error) {
+				if (process.env.G_MESSAGES_DEBUG === "all") {
+					console.error("Reading file caused this error:", error);
+				}
+				css = "";
 			}
 		}
 
@@ -165,15 +168,6 @@ class GtkTheme implements IGtkTheme {
 			decoration.indexOf(":") === decoration.length - 1
 				? "left"
 				: "right";
-
-		const gresourceFound = findGResourceAsset({
-			theme: name,
-			folder: gtk.folder
-		});
-
-		if (gresourceFound) {
-		}
-
 		const theme = {
 			name,
 			gtk,
