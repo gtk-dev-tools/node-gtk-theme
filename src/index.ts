@@ -1,8 +1,8 @@
-import { themeName } from './themeName';
-import { decorationLayout } from './decorationLayout';
-import fs from 'fs';
-import path from 'path';
-import { homedir } from 'os';
+import { themeName } from "./themeName";
+import { decorationLayout } from "./decorationLayout";
+import fs from "fs";
+import path from "path";
+import { homedir } from "os";
 import {
 	IGtkTheme,
 	GtkData,
@@ -11,10 +11,11 @@ import {
 	GTKThemeHooks,
 	GTKThemeOptions,
 	NGtkCSSData,
-	NGtkSupportedData,
-} from './interfaces';
-import { themeFolders } from './themeFolders';
-
+	NGtkSupportedData
+} from "./interfaces";
+import { themeFolders } from "./themeFolders";
+import { findGResourceAsset } from "./findGResourceAsset";
+import { convertGResource } from "./convertGResource";
 
 class GtkTheme implements IGtkTheme {
 	private themeName: string;
@@ -22,10 +23,10 @@ class GtkTheme implements IGtkTheme {
 
 	on: IGtkThemeEventList = {};
 
-	private hooks: GTKThemeHooks = { prefetch: [] };
+	private hooks: GTKThemeHooks = { prefetch: [], postfetch: [] };
 
 	private themeChanged = (event: string) => {
-		if (event === 'change') {
+		if (event === "change") {
 			const data = this.getTheme();
 
 			if (this.themeName !== data.name) {
@@ -45,7 +46,7 @@ class GtkTheme implements IGtkTheme {
 		}
 	};
 
-	constructor (options: GTKThemeOptions) {
+	constructor(options: GTKThemeOptions) {
 		const { hooks, events } = options;
 
 		if (hooks != null) {
@@ -71,61 +72,80 @@ class GtkTheme implements IGtkTheme {
 			}
 		}
 
-		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, this.themeChanged);
+		fs.watch(
+			path.resolve(`${homedir()}/.config/dconf`),
+			{ encoding: "utf8" },
+			this.themeChanged
+		);
 	}
 
 	/**
 	 * Get the supported buttons & whether CSD is supported.
 	 */
-	private getSupported (decoration: string = ''): NGtkSupportedData {
+	private getSupported(decoration: string = ""): NGtkSupportedData {
 		return {
-			buttons: decoration.split(":").filter((button: string) => button !== 'appmenu')[0].split(','),
+			buttons: decoration
+				.split(":")
+				.filter((button: string) => button !== "appmenu")[0]
+				.split(","),
 			// TODO: Make this check for version of GTK.
-			csd: true,
+			csd: true
 		};
 	}
 
 	/**
 	 * Gets the relevant information for the GTK css.
 	 */
-	private getGtkObj (name: string): NGtkCSSData {
+	private getGtkObj(name: string): NGtkCSSData {
 		const themes = themeFolders(name);
-		let theme: string = '';
+		let theme: string = "";
 		let css: string;
+		const gresourceAsset = findGResourceAsset({
+			theme: name,
+			folder: `${theme}/gtk-3.0/`
+		});
 
-		if ('' !== themes.snap) {
+		if (gresourceAsset) {
+			css = convertGResource(gresourceAsset);
+		}
+
+		if ("" !== themes.snap) {
 			theme = themes.snap;
 		}
 
-		if ('' !== themes.user) {
+		if ("" !== themes.user) {
 			theme = themes.user;
 		}
 
-		if ('' !== themes.global || '' === theme) {
+		if ("" !== themes.global || "" === theme) {
 			theme = themes.global;
 		}
 
-		try {
-			css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, { encoding: 'utf8' })
-		} catch (error) {
-			if (process.env.G_MESSAGES_DEBUG === 'all') {
-				console.error('Reading file caused this error:', error);
+		if (css != null && css !== "" && !gresourceAsset) {
+			try {
+				css = fs.readFileSync(`${theme}/gtk-3.0/gtk.css`, {
+					encoding: "utf8"
+				});
+			} catch (error) {
+				if (process.env.G_MESSAGES_DEBUG === "all") {
+					console.error("Reading file caused this error:", error);
+				}
+				css = "";
 			}
-			css = '';
 		}
 
 		return {
 			css,
 			folder: `${theme}/gtk-3.0/`,
-			root: theme || '',
+			root: theme || ""
 		};
 	}
 
-	private clone (obj: any) {
+	private clone(obj: any) {
 		return JSON.parse(JSON.stringify(obj));
 	}
 
-	public getTheme (): GtkData {
+	public getTheme(): GtkData {
 		// Hook into a pre fetch of the theme.
 		// Synchronous
 		if (this.hooks.prefetch.length > 0) {
@@ -134,20 +154,33 @@ class GtkTheme implements IGtkTheme {
 			}
 		}
 
-		const name: string = themeName().split(`'`).join('').replace(/\n$/, '');
-		const decoration: string = decorationLayout().split(`'`).join('').replace(/\n$/, '');
+		const name: string = themeName()
+			.split(`'`)
+			.join("")
+			.replace(/\n$/, "");
+		const decoration: string = decorationLayout()
+			.split(`'`)
+			.join("")
+			.replace(/\n$/, "");
 		const gtk: NGtkCSSData = this.getGtkObj(name);
 		const supported: NGtkSupportedData = this.getSupported(decoration);
-		const buttons: 'left' | 'right' = decoration.indexOf(':') === decoration.length - 1 ? 'left' : 'right';
+		const buttons: "left" | "right" =
+			decoration.indexOf(":") === decoration.length - 1
+				? "left"
+				: "right";
 		const theme = {
 			name,
 			gtk,
 			supported,
-			layout: { buttons, decoration }
+			layout: {
+				buttons,
+				decoration
+			}
 		};
+
 		let postfetchedTheme = this.clone(theme);
 
-		if (this.hooks.prefetch.length > 0) {
+		if (this.hooks.postfetch.length > 0) {
 			for (const hook of this.hooks.postfetch) {
 				const r = this.clone(hook(theme));
 				if (!!r) {
@@ -167,5 +200,5 @@ export {
 	IGtkThemeEventList,
 	prefetch,
 	GTKThemeHooks,
-	GTKThemeOptions,
+	GTKThemeOptions
 };
