@@ -1,6 +1,6 @@
 {
   "name": "@jakejarrett/gtk-theme",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.1",
   "description": "Get the current GTK3 theme",
   "main": "dist/index.js",
   "scripts": {

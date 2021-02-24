@@ -2,6 +2,7 @@ import { themeName } from './themeName';
 import { decorationLayout } from './decorationLayout';
 import fs from 'fs';
 import path from 'path';
+import process from 'process';
 import { homedir } from 'os';
 import {
 	IGtkTheme,
@@ -69,6 +70,10 @@ class GtkTheme implements IGtkTheme {
 			if (events.themeChange) {
 				this.on.themeChange = events.themeChange;
 			}
+		}
+
+		if (process.platform !== "linux") {
+			return;
 		}
 
 		fs.watch(path.resolve(`${homedir()}/.config/dconf`), { encoding: 'utf8' }, this.themeChanged);
